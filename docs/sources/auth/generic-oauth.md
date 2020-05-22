@@ -12,10 +12,13 @@ weight = 3
 
 # Generic OAuth Authentication
 
-You can configure many different oauth2 authentication services with Grafana using the generic oauth2 feature. Below you
+You can configure many different OAuth2 authentication services with Grafana using the generic OAuth2 feature. Below you
 can find examples using Okta, BitBucket, OneLogin and Azure.
 
 This callback URL must match the full HTTP address that you use in your browser to access Grafana, but with the prefix path of `/login/generic_oauth`.
+
+You may have to set the `root_url` option of `[server]` for the callback URL to be
+correct. For example in case you are serving Grafana behind a proxy.
 
 Example config:
 
@@ -37,26 +40,19 @@ Set `api_url` to the resource that returns [OpenID UserInfo](https://connect2id.
 Grafana will attempt to determine the user's e-mail address by querying the OAuth provider as described below in the following order until an e-mail address is found:
 
 1. Check for the presence of an e-mail address via the `email` field encoded in the OAuth `id_token` parameter.
-2. Check for the presence of an e-mail address in the `attributes` map encoded in the OAuth `id_token` parameter. By default Grafana will perform a lookup into the attributes map using the `email:primary` key, however, this is configurable and can be adjusted by using the `email_attribute_name` configuration option.
-3. Query the `/emails` endpoint of the OAuth provider's API (configured with `api_url`) and check for the presence of an e-mail address marked as a primary address.
-4. If no e-mail address is found in steps (1-3), then the e-mail address of the user is set to the empty string.
+2. Check for the presence of an e-mail address using the [JMESPath](http://jmespath.org/examples.html) specified via the `email_attribute_path` configuration option. The JSON used for the path lookup is the HTTP response obtained from querying the UserInfo endpoint specified via the `api_url` configuration option.
+**Note**: Only available in Grafana v6.4+.
+3. Check for the presence of an e-mail address in the `attributes` map encoded in the OAuth `id_token` parameter. By default Grafana will perform a lookup into the attributes map using the `email:primary` key, however, this is configurable and can be adjusted by using the `email_attribute_name` configuration option.
+4. Query the `/emails` endpoint of the OAuth provider's API (configured with `api_url`) and check for the presence of an e-mail address marked as a primary address.
+5. If no e-mail address is found in steps (1-4), then the e-mail address of the user is set to the empty string.
 
-## Set up OAuth2 with Okta
+Grafana will also attempt to do role mapping through OAuth as described below.
 
-First set up Grafana as an OpenId client "webapplication" in Okta. Then set the Base URIs to `https://<grafana domain>/` and set the Login redirect URIs to `https://<grafana domain>/login/generic_oauth`.
+> Only available in Grafana v6.5+.
 
-Finally set up the generic oauth module like this:
-```bash
-[auth.generic_oauth]
-name = Okta
-enabled = true
-scopes = openid profile email
-client_id = <okta application Client ID>
-client_secret = <okta application Client Secret>
-auth_url = https://<okta domain>/oauth2/v1/authorize
-token_url = https://<okta domain>/oauth2/v1/token
-api_url = https://<okta domain>/oauth2/v1/userinfo
-```
+Check for the presence of a role using the [JMESPath](http://jmespath.org/examples.html) specified via the `role_attribute_path` configuration option. The JSON used for the path lookup is the HTTP response obtained from querying the UserInfo endpoint specified via the `api_url` configuration option. The result after evaluating the `role_attribute_path` JMESPath expression needs to be a valid Grafana role, i.e. `Viewer`, `Editor` or `Admin`.
+
+See [JMESPath examples](#jmespath-examples) for more information.
 
 ## Set up OAuth2 with Bitbucket
 
@@ -91,7 +87,7 @@ allowed_organizations =
     then:
 3.  Under the SSO tab on the Grafana App details page you'll find the Client ID and Client Secret.
 
-    Your OneLogin Domain will match the url you use to access OneLogin.
+    Your OneLogin Domain will match the URL you use to access OneLogin.
 
     Configure Grafana as follows:
 
@@ -103,14 +99,14 @@ allowed_organizations =
     client_id = <client id>
     client_secret = <client secret>
     scopes = openid email name
-    auth_url = https://<onelogin domain>.onelogin.com/oidc/auth
-    token_url = https://<onelogin domain>.onelogin.com/oidc/token
-    api_url = https://<onelogin domain>.onelogin.com/oidc/me
+    auth_url = https://<onelogin domain>.onelogin.com/oidc/2/auth
+    token_url = https://<onelogin domain>.onelogin.com/oidc/2/token
+    api_url = https://<onelogin domain>.onelogin.com/oidc/2/me
     team_ids =
     allowed_organizations =
     ```
 
-### Set up OAuth2 with Auth0
+## Set up OAuth2 with Auth0
 
 1.  Create a new Client in Auth0
     - Name: Grafana
@@ -135,46 +131,6 @@ allowed_organizations =
     token_url = https://<domain>/oauth/token
     api_url = https://<domain>/userinfo
     ```
-
-### Set up OAuth2 with Azure Active Directory
-
-1.  Log in to portal.azure.com and click "Azure Active Directory" in the side menu, then click the "Properties" sub-menu item.
-
-2.  Copy the "Directory ID", this is needed for setting URLs later
-
-3.  Click "App Registrations" and add a new application registration:
-    - Name: Grafana
-    - Application type: Web app / API
-    - Sign-on URL: `https://<grafana domain>/login/generic_oauth`
-
-4.  Click the name of the new application to open the application details page.
-
-5.  Note down the "Application ID", this will be the OAuth client id.
-
-6.  Click "Settings", then click "Keys" and add a new entry under Passwords
-    - Key Description: Grafana OAuth
-    - Duration: Never Expires
-
-7.  Click Save then copy the key value, this will be the OAuth client secret.
-
-8.  Configure Grafana as follows:
-
-    ```bash
-    [auth.generic_oauth]
-    name = Azure AD
-    enabled = true
-    allow_sign_up = true
-    client_id = <application id>
-    client_secret = <key value>
-    scopes = openid email name
-    auth_url = https://login.microsoftonline.com/<directory id>/oauth2/authorize
-    token_url = https://login.microsoftonline.com/<directory id>/oauth2/token
-    api_url =
-    team_ids =
-    allowed_organizations =
-    ```
-
-> Note: It's important to ensure that the [root_url](/installation/configuration/#root-url) in Grafana is set in your Azure Application Reply URLs (App -> Settings -> Reply URLs)
 
 ## Set up OAuth2 with Centrify
 
@@ -201,11 +157,57 @@ allowed_organizations =
     allow_sign_up = true
     client_id = <OpenID Connect Client ID from Centrify>
     client_secret = <your generated OpenID Connect Client Sercret"
-    scopes = openid email name
+    scopes = openid profile email
     auth_url = https://<your domain>.my.centrify.com/OAuth2/Authorize/<Application ID>
     token_url = https://<your domain>.my.centrify.com/OAuth2/Token/<Application ID>
+    api_url = https://<your domain>.my.centrify.com/OAuth2/UserInfo/<Application ID>
     ```
 
-<hr>
+## JMESPath examples
 
+To ease configuration of a proper JMESPath expression, you can test/evaluate expressions with custom payloads at http://jmespath.org/.
 
+### Role mapping
+
+**Basic example:**
+
+In the following example user will get `Editor` as role when authenticating. The value of the property `role` will be the resulting role if the role is a proper Grafana role, i.e. `Viewer`, `Editor` or `Admin`.
+
+Payload:
+```json
+{
+    ...
+    "role": "Editor",
+    ...
+}
+```
+
+Config:
+```bash
+role_attribute_path = role
+```
+
+**Advanced example:**
+
+In the following example user will get `Admin` as role when authenticating since it has a group `admin`. If a user has a group `editor` it will get `Editor` as role, otherwise `Viewer`.
+
+Payload:
+```json
+{
+    ...
+    "info": {
+        ...
+        "groups": [
+            "engineer",
+            "admin",
+        ],
+        ...
+    },
+    ...
+}
+```
+
+Config:
+```bash
+role_attribute_path = contains(info.groups[*], 'admin') && 'Admin' || contains(info.groups[*], 'editor') && 'Editor' || 'Viewer'
+```

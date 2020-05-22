@@ -2,8 +2,19 @@ module.exports = function(config, grunt) {
   'use strict';
 
   return {
-    tslint: 'node ./node_modules/tslint/lib/tslintCli.js -c tslint.json --project ./tsconfig.json',
-    jest: 'node ./node_modules/jest-cli/bin/jest.js --maxWorkers 2',
+    eslintPackages: {
+      command: 'yarn packages:lint',
+    },
+    eslintRoot: {
+      command: 'yarn lint',
+    },
+    typecheckPackages: {
+      command: 'yarn packages:typecheck',
+    },
+    typecheckRoot: {
+      command: 'yarn typecheck',
+    },
+    jest: 'yarn jest-ci',
     webpack: 'node ./node_modules/webpack/bin/webpack.js --config scripts/webpack/webpack.prod.js',
   };
 };

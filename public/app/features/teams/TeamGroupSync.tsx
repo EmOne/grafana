@@ -1,10 +1,14 @@
 import React, { PureComponent } from 'react';
 import { connect } from 'react-redux';
-import SlideDown from 'app/core/components/Animations/SlideDown';
-import Tooltip from 'app/core/components/Tooltip/Tooltip';
+
+import { SlideDown } from 'app/core/components/Animations/SlideDown';
+import { LegacyForms, Tooltip, Icon } from '@grafana/ui';
+const { Input } = LegacyForms;
+
 import { TeamGroup } from '../../types';
 import { addTeamGroup, loadTeamGroups, removeTeamGroup } from './state/actions';
 import { getTeamGroups } from './state/selectors';
+import EmptyListCTA from 'app/core/components/EmptyListCTA/EmptyListCTA';
 
 export interface Props {
   groups: TeamGroup[];
@@ -21,7 +25,7 @@ interface State {
 const headerTooltip = `Sync LDAP or OAuth groups with your Grafana teams.`;
 
 export class TeamGroupSync extends PureComponent<Props, State> {
-  constructor(props) {
+  constructor(props: Props) {
     super(props);
     this.state = { isAdding: false, newGroupId: '' };
   }
@@ -38,11 +42,11 @@ export class TeamGroupSync extends PureComponent<Props, State> {
     this.setState({ isAdding: !this.state.isAdding });
   };
 
-  onNewGroupIdChanged = event => {
+  onNewGroupIdChanged = (event: any) => {
     this.setState({ newGroupId: event.target.value });
   };
 
-  onAddGroup = event => {
+  onAddGroup = (event: any) => {
     event.preventDefault();
     this.props.addTeamGroup(this.state.newGroupId);
     this.setState({ isAdding: false, newGroupId: '' });
@@ -61,8 +65,8 @@ export class TeamGroupSync extends PureComponent<Props, State> {
       <tr key={group.groupId}>
         <td>{group.groupId}</td>
         <td style={{ width: '1%' }}>
-          <a className="btn btn-danger btn-mini" onClick={() => this.onRemoveGroup(group)}>
-            <i className="fa fa-remove" />
+          <a className="btn btn-danger btn-small" onClick={() => this.onRemoveGroup(group)}>
+            <Icon name="times" style={{ marginBottom: 0 }} />
           </a>
         </td>
       </tr>
@@ -77,13 +81,13 @@ export class TeamGroupSync extends PureComponent<Props, State> {
       <div>
         <div className="page-action-bar">
           <h3 className="page-sub-heading">External group sync</h3>
-          <Tooltip className="page-sub-heading-icon" placement="auto" content={headerTooltip}>
-            <i className="gicon gicon-question gicon--has-hover" />
+          <Tooltip placement="auto" content={headerTooltip}>
+            <Icon className="icon--has-hover page-sub-heading-icon" name="question-circle" />
           </Tooltip>
           <div className="page-action-bar__spacer" />
           {groups.length > 0 && (
-            <button className="btn btn-success pull-right" onClick={this.onToggleAdding}>
-              <i className="fa fa-plus" /> Add group
+            <button className="btn btn-primary pull-right" onClick={this.onToggleAdding}>
+              <Icon name="plus" /> Add group
             </button>
           )}
         </div>
@@ -91,12 +95,12 @@ export class TeamGroupSync extends PureComponent<Props, State> {
         <SlideDown in={isAdding}>
           <div className="cta-form">
             <button className="cta-form__close btn btn-transparent" onClick={this.onToggleAdding}>
-              <i className="fa fa-close" />
+              <Icon name="times" />
             </button>
             <h5>Add External Group</h5>
             <form className="gf-form-inline" onSubmit={this.onAddGroup}>
               <div className="gf-form">
-                <input
+                <Input
                   type="text"
                   className="gf-form-input width-30"
                   value={newGroupId}
@@ -106,7 +110,7 @@ export class TeamGroupSync extends PureComponent<Props, State> {
               </div>
 
               <div className="gf-form">
-                <button className="btn btn-success gf-form-btn" type="submit" disabled={!this.isNewGroupValid()}>
+                <button className="btn btn-primary gf-form-btn" type="submit" disabled={!this.isNewGroupValid()}>
                   Add group
                 </button>
               </div>
@@ -114,22 +118,18 @@ export class TeamGroupSync extends PureComponent<Props, State> {
           </div>
         </SlideDown>
 
-        {groups.length === 0 &&
-          !isAdding && (
-            <div className="empty-list-cta">
-              <div className="empty-list-cta__title">There are no external groups to sync with</div>
-              <button onClick={this.onToggleAdding} className="empty-list-cta__button btn btn-xlarge btn-success">
-                <i className="gicon gicon-add-team" />
-                Add Group
-              </button>
-              <div className="empty-list-cta__pro-tip">
-                <i className="fa fa-rocket" /> {headerTooltip}
-                <a className="text-link empty-list-cta__pro-tip-link" href="asd" target="_blank">
-                  Learn more
-                </a>
-              </div>
-            </div>
-          )}
+        {groups.length === 0 && !isAdding && (
+          <EmptyListCTA
+            onClick={this.onToggleAdding}
+            buttonIcon="users-alt"
+            title="There are no external groups to sync with"
+            buttonTitle="Add Group"
+            proTip={headerTooltip}
+            proTipLinkTitle="Learn more"
+            proTipLink="http://docs.grafana.org/auth/enhanced_ldap/"
+            proTipTarget="_blank"
+          />
+        )}
 
         {groups.length > 0 && (
           <div className="admin-list-table">
@@ -149,7 +149,7 @@ export class TeamGroupSync extends PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state) {
+function mapStateToProps(state: any) {
   return {
     groups: getTeamGroups(state.team),
   };

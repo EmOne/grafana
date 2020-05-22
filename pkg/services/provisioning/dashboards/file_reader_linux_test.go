@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/grafana/grafana/pkg/log"
+	"github.com/grafana/grafana/pkg/infra/log"
 )
 
 var (
@@ -14,10 +14,10 @@ var (
 )
 
 func TestProvsionedSymlinkedFolder(t *testing.T) {
-	cfg := &DashboardsAsConfig{
+	cfg := &config{
 		Name:    "Default",
 		Type:    "file",
-		OrgId:   1,
+		OrgID:   1,
 		Folder:  "",
 		Options: map[string]interface{}{"path": symlinkedFolder},
 	}
@@ -27,13 +27,14 @@ func TestProvsionedSymlinkedFolder(t *testing.T) {
 		t.Error("expected err to be nil")
 	}
 
-	want, err := filepath.Abs(containingId)
+	want, err := filepath.Abs(containingID)
 
 	if err != nil {
-		t.Errorf("expected err to be nill")
+		t.Errorf("expected err to be nil")
 	}
 
-	if reader.Path != want {
-		t.Errorf("got %s want %s", reader.Path, want)
+	resolvedPath := reader.resolvedPath()
+	if resolvedPath != want {
+		t.Errorf("got %s want %s", resolvedPath, want)
 	}
 }

@@ -18,8 +18,8 @@ To enable the Google OAuth2 you must register your application with Google. Goog
 
 First, you need to create a Google OAuth Client:
 
-1. Go to https://console.developers.google.com/apis/credentials
-2. Click the 'Create Credentials' button, then click 'OAuth Client ID' in the menu that drops down
+1. Go to https://console.developers.google.com/apis/credentials.
+2. Click **Create Credentials**, then click **OAuth Client ID** in the drop-down menu
 3. Enter the following:
    - Application Type: Web Application
    - Name: Grafana
@@ -31,7 +31,7 @@ First, you need to create a Google OAuth Client:
 
 ## Enable Google OAuth in Grafana
 
-Specify the Client ID and Secret in the [Grafana configuration file]({{< relref "installation/configuration.md#config-file-locations" >}}). For example:
+Specify the Client ID and Secret in the [Grafana configuration file]({{< relref "../installation/configuration.md#config-file-locations" >}}). For example:
 
 ```bash
 [auth.google]
@@ -44,6 +44,9 @@ token_url = https://accounts.google.com/o/oauth2/token
 allowed_domains = mycompany.com mycompany.org
 allow_sign_up = true
 ```
+
+You may have to set the `root_url` option of `[server]` for the callback URL to be 
+correct. For example in case you are serving Grafana behind a proxy.
 
 Restart the Grafana back-end. You should now see a Google login button
 on the login page. You can now login or sign up with your Google

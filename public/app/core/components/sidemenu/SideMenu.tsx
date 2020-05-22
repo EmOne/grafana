@@ -1,28 +1,29 @@
 import React, { PureComponent } from 'react';
 import appEvents from '../../app_events';
-import { contextSrv } from 'app/core/services/context_srv';
 import TopSection from './TopSection';
 import BottomSection from './BottomSection';
+import config from 'app/core/config';
+import { CoreEvents } from 'app/types';
+import { Branding } from 'app/core/components/Branding/Branding';
+import { Icon } from '@grafana/ui';
+
+const homeUrl = config.appSubUrl || '/';
 
 export class SideMenu extends PureComponent {
-  toggleSideMenu = () => {
-    contextSrv.toggleSideMenu();
-    appEvents.emit('toggle-sidemenu');
-  };
-
   toggleSideMenuSmallBreakpoint = () => {
-    appEvents.emit('toggle-sidemenu-mobile');
+    appEvents.emit(CoreEvents.toggleSidemenuMobile);
   };
 
   render() {
     return [
-      <div className="sidemenu__logo" onClick={this.toggleSideMenu} key="logo">
-        <img src="public/img/grafana_icon.svg" alt="graphana_logo" />
-      </div>,
+      <a href={homeUrl} className="sidemenu__logo" key="logo">
+        <Branding.MenuLogo />
+      </a>,
       <div className="sidemenu__logo_small_breakpoint" onClick={this.toggleSideMenuSmallBreakpoint} key="hamburger">
-        <i className="fa fa-bars" />
+        <Icon name="bars" size="xl" />
         <span className="sidemenu__close">
-          <i className="fa fa-times" />&nbsp;Close
+          <Icon name="times" />
+          &nbsp;Close
         </span>
       </div>,
       <TopSection key="topsection" />,

@@ -1,32 +1,14 @@
-import { StoreState } from 'app/types';
-import { ThunkAction } from 'redux-thunk';
-import { getBackendSrv } from 'app/core/services/backend_srv';
-
-import {
-  DashboardAcl,
-  DashboardAclDTO,
-  PermissionLevel,
-  DashboardAclUpdateDTO,
-  NewDashboardAclItem,
-} from 'app/types/acl';
-
-export enum ActionTypes {
-  LoadDashboardPermissions = 'LOAD_DASHBOARD_PERMISSIONS',
-}
-
-export interface LoadDashboardPermissionsAction {
-  type: ActionTypes.LoadDashboardPermissions;
-  payload: DashboardAcl[];
-}
-
-export type Action = LoadDashboardPermissionsAction;
-
-type ThunkResult<R> = ThunkAction<R, StoreState, undefined, any>;
-
-export const loadDashboardPermissions = (items: DashboardAclDTO[]): LoadDashboardPermissionsAction => ({
-  type: ActionTypes.LoadDashboardPermissions,
-  payload: items,
-});
+// Services & Utils
+import { getBackendSrv } from '@grafana/runtime';
+import { createSuccessNotification } from 'app/core/copy/appNotification';
+// Actions
+import { loadPluginDashboards } from '../../plugins/state/actions';
+import { loadDashboardPermissions, panelModelAndPluginReady, setPanelAngularComponent } from './reducers';
+import { notifyApp } from 'app/core/actions';
+import { loadPanelPlugin } from 'app/features/plugins/state/actions';
+// Types
+import { DashboardAcl, DashboardAclUpdateDTO, NewDashboardAclItem, PermissionLevel, ThunkResult } from 'app/types';
+import { PanelModel } from './PanelModel';
 
 export function getDashboardPermissions(id: number): ThunkResult<void> {
   return async dispatch => {
@@ -58,9 +40,9 @@ export function updateDashboardPermission(
         continue;
       }
 
-      const updated = toUpdateItem(itemToUpdate);
+      const updated = toUpdateItem(item);
 
-      // if this is the item we want to update, update it's permisssion
+      // if this is the item we want to update, update it's permission
       if (itemToUpdate === item) {
         updated.permission = level;
       }
@@ -111,5 +93,63 @@ export function addDashboardPermission(dashboardId: number, newItem: NewDashboar
 
     await getBackendSrv().post(`/api/dashboards/id/${dashboardId}/permissions`, { items: itemsToUpdate });
     await dispatch(getDashboardPermissions(dashboardId));
+  };
+}
+
+export function importDashboard(data: any, dashboardTitle: string): ThunkResult<void> {
+  return async dispatch => {
+    await getBackendSrv().post('/api/dashboards/import', data);
+    dispatch(notifyApp(createSuccessNotification('Dashboard Imported', dashboardTitle)));
+    dispatch(loadPluginDashboards());
+  };
+}
+
+export function removeDashboard(uri: string): ThunkResult<void> {
+  return async dispatch => {
+    await getBackendSrv().delete(`/api/dashboards/${uri}`);
+    dispatch(loadPluginDashboards());
+  };
+}
+
+export function initDashboardPanel(panel: PanelModel): ThunkResult<void> {
+  return async (dispatch, getStore) => {
+    let plugin = getStore().plugins.panels[panel.type];
+
+    if (!plugin) {
+      plugin = await dispatch(loadPanelPlugin(panel.type));
+    }
+
+    if (!panel.plugin) {
+      panel.pluginLoaded(plugin);
+    }
+
+    dispatch(panelModelAndPluginReady({ panelId: panel.id, plugin }));
+  };
+}
+
+export function changePanelPlugin(panel: PanelModel, pluginId: string): ThunkResult<void> {
+  return async (dispatch, getStore) => {
+    // ignore action is no change
+    if (panel.type === pluginId) {
+      return;
+    }
+
+    const store = getStore();
+    let plugin = store.plugins.panels[pluginId];
+
+    if (!plugin) {
+      plugin = await dispatch(loadPanelPlugin(pluginId));
+    }
+
+    // clean up angular component (scope / ctrl state)
+    const angularComponent = store.dashboard.panels[panel.id].angularComponent;
+    if (angularComponent) {
+      angularComponent.destroy();
+      dispatch(setPanelAngularComponent({ panelId: panel.id, angularComponent: null }));
+    }
+
+    panel.changePlugin(plugin);
+
+    dispatch(panelModelAndPluginReady({ panelId: panel.id, plugin }));
   };
 }
